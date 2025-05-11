@@ -329,7 +329,7 @@ div.figure p.caption, figure p.caption { /* margin provided by figure */
 	}
 
 		/* Icons */
-        .social a[href*='bsky.app'] {background-image: url('../images/icons/bluesky.png');}
+		.social a[href*='bsky.app'] {background-image: url('../images/icons/bluesky.png');}
 		.social a[href*='about.me'] {background-image: url('../images/icons/aboutme.png');}
 		.social a[href*='bitbucket.org'] {background-image: url('../images/icons/bitbucket.png');}
 		.social a[href*='delicious.com'] {background-image: url('../images/icons/delicious.png');}
