@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom"><title>Brian Gawalt's Blog</title><link href="https://brian.gawalt.com/blog/" rel="alternate"></link><link href="https://brian.gawalt.com/blog/feeds/all.atom.xml" rel="self"></link><id>https://brian.gawalt.com/blog/</id><updated>2026-02-02T11:30:00-08:00</updated><entry><title>Why's Lasso Do That?</title><link href="https://brian.gawalt.com/blog/0004-lasso.html" rel="alternate"></link><published>2026-02-02T11:30:00-08:00</published><updated>2026-02-02T11:30:00-08:00</updated><author><name>Brian Gawalt</name></author><id>tag:brian.gawalt.com,2026-02-02:/blog/0004-lasso.html</id><summary type="html">&lt;p&gt;How the Lasso forces a zero-weight model: an end-to-end rundown.&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;img alt="MS Paint doodle of a purple lambda (the Greek alphabet character) twirling a
-lasso in the desert" src="/images/0004_lasso_twirl.png" style="width:80%; max-width:500px;"&gt;&lt;/p&gt;
+lasso in the desert" src="https://brian.gawalt.com/blog/images/0004_lasso_twirl.png" style="width:80%; max-width:500px;"&gt;&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; this post makes heavy use of MathJax. If you're reading via RSS,
 you'll want to click through to the web version.&lt;/p&gt;
@@ -115,7 +115,7 @@ a slope of 1 to a totally null (maximally simple!) slope of zero:&lt;/p&gt;
 +/- 0.5 or so.  Three dashed lines pass through the origin, colored blue,
 purple, and red.  They correspond to model predictions from an unregularized
 (slope of 1.037), moderately regularized (slope 0.461), and heavily regularized
-(slope 0) Lasso fit." src="/images/0004_a_scatterplot.png"&gt;&lt;/p&gt;
+(slope 0) Lasso fit." src="https://brian.gawalt.com/blog/images/0004_a_scatterplot.png"&gt;&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;The model with least regularization, &lt;span class="math"&gt;\(\lambda = 0\)&lt;/span&gt; in blue, has a trendline
    that best fits the data.&lt;/li&gt;
@@ -134,7 +134,7 @@ The y-axis is labelled w*(lambda), ranging from 0 to just over 1.  The graph's
 title is &amp;quot;Regularization Path&amp;quot;.  A single red series starts as a straight red
 line from  the point (0, 1.037) to (630, 0), connecting to another straight red
 line from (630, 0) to (950, 0).  Three dots appear, a blue one at (0, 1.037),
-purple at (350, 0.461), and red at (800, 0)." src="/images/0004_b_regularization_path.png"&gt;&lt;/p&gt;
+purple at (350, 0.461), and red at (800, 0)." src="https://brian.gawalt.com/blog/images/0004_b_regularization_path.png"&gt;&lt;/p&gt;
 &lt;p&gt;As regularization strength increases, the resulting model weight drops linearly,
 until it hits absolute zero.  Early on, you see compromise between &lt;span class="math"&gt;\(f\)&lt;/span&gt; and &lt;span class="math"&gt;\(r\)&lt;/span&gt;:
 &lt;span class="math"&gt;\(f\)&lt;/span&gt; wants a slope of 1, and &lt;span class="math"&gt;\(r\)&lt;/span&gt; wants a slope of 0, and as we strengthen &lt;span class="math"&gt;\(r\)&lt;/span&gt;'s
@@ -178,7 +178,7 @@ means &lt;span class="math"&gt;\(f\)&lt;/span&gt; is minimized at:&lt;/p&gt;
 we used above:&lt;/p&gt;
 &lt;p&gt;&lt;img alt="A blue convex parabola, crossing the y axis at around 340, hitting its minimum
 at the point (1.038, 13.9), with its axis of symmetry added as a vertical blue
-dashed line" src="/images/0004_c_parabola_zero_reg.png"&gt;&lt;/p&gt;
+dashed line" src="https://brian.gawalt.com/blog/images/0004_c_parabola_zero_reg.png"&gt;&lt;/p&gt;
 &lt;p&gt;We use an optimization routine that implements some kind of descent method to
 start with any arbitrary guess at the &lt;span class="math"&gt;\(w\)&lt;/span&gt; that minimizes &lt;span class="math"&gt;\(f\)&lt;/span&gt;, then refines it
 until it finds the actual minimum.  Imagine this optimization routine as a
@@ -240,7 +240,7 @@ looks like, where the purple series is the sum of the blue and the red:&lt;/p&gt
 absolute value function that passes through (1, 350).  Both these are mostly
 transparent, they are called &amp;quot;f(w)&amp;quot; and &amp;quot;lambda r(w)&amp;quot; in the legend at the 
 bottom of the figure.  Their sum, a thicker, opaque purple series, looks an
-awful lot like a parabola." src="/images/0004_d_parabola_some_reg.png"&gt;&lt;/p&gt;
+awful lot like a parabola." src="https://brian.gawalt.com/blog/images/0004_d_parabola_some_reg.png"&gt;&lt;/p&gt;
 &lt;p&gt;Imagine the little guy starts at &lt;span class="math"&gt;\(w = -1\)&lt;/span&gt;.  His thought process is:&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;"I am starting on the LHS.  The LHS instructions say I should head to
@@ -262,7 +262,7 @@ vertex:&lt;/p&gt;
 &lt;p&gt;&lt;img alt="Same as previous image, but with the vertices of the blue and purple
 parabolas drawn with large blue/purple dots.  Two vertical dashed guidelines
 mark the axes of symmetry for the parabolas, and a left-pointing arrow going
-from the blue axis to the purple axis is labeled &amp;quot;-λ/(2Sx)&amp;quot;" src="/images/0004_e_parabola_some_reg_vertices.png"&gt;&lt;/p&gt;
+from the blue axis to the purple axis is labeled &amp;quot;-λ/(2Sx)&amp;quot;" src="https://brian.gawalt.com/blog/images/0004_e_parabola_some_reg_vertices.png"&gt;&lt;/p&gt;
 &lt;p&gt;Neither &lt;span class="math"&gt;\(f\)&lt;/span&gt; nor &lt;span class="math"&gt;\(r\)&lt;/span&gt; are minimized at that points where they intersect the purple
 vertex axis of symmetry.  Both could be much smaller, if they didn't have to
 accommodate the other.  That's a good compromise: one that leaves everyone
@@ -277,7 +277,7 @@ absolute value function that passes through (0.5, 350).  Both these are mostly
 transparent, they are called &amp;quot;f(w)&amp;quot; and &amp;quot;lambda r(w)&amp;quot; in the legend at the 
 bottom of the figure.  Their sum, a thicker, opaque red series, no longer looks
 like a parabola, it now looks like a Greek nu character with it point at
-(0, 320)." src="/images/0004_f_parabola_lots_reg.png"&gt;&lt;/p&gt;
+(0, 320)." src="https://brian.gawalt.com/blog/images/0004_f_parabola_lots_reg.png"&gt;&lt;/p&gt;
 &lt;p&gt;The thought process for our little guy is:&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;"When I'm on the LHS, it wants me to go to
@@ -348,7 +348,7 @@ a big blue dot marking its x intercept around 1.0;
 a breakage at w=0, with intercepts of -1000 and 250 on either side, with a big
 purple dot marking its x intercept around 0.49;
 (3) in red, a piecewise linear function where both pieces have slope 650, but
-a breakage at w=0, with intercepts of -1450 and 150" src="/images/0004_g_slopes.png"&gt;&lt;/p&gt;
+a breakage at w=0, with intercepts of -1450 and 150" src="https://brian.gawalt.com/blog/images/0004_g_slopes.png"&gt;&lt;/p&gt;
 &lt;p&gt;(Side note: in an alternate case where &lt;span class="math"&gt;\(D_{xy}\)&lt;/span&gt; is negative, this plot of
 slopes will look very similar.  Lasso is still convex, so these slope curves
 must still all be non-decreasing.  The difference would be that the blue and
