@@ -1,5 +1,526 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Brian Gawalt's Blog</title><link href="https://brian.gawalt.com/blog/" rel="alternate"></link><link href="https://brian.gawalt.com/blog/feeds/all.atom.xml" rel="self"></link><id>https://brian.gawalt.com/blog/</id><updated>2025-05-21T16:30:00-07:00</updated><entry><title>Humanoid Robots Are a Would-be Platform</title><link href="https://brian.gawalt.com/blog/0003-robot-platform.html" rel="alternate"></link><published>2025-05-21T16:30:00-07:00</published><updated>2025-05-21T16:30:00-07:00</updated><author><name>Brian Gawalt</name></author><id>tag:brian.gawalt.com,2025-05-21:/blog/0003-robot-platform.html</id><summary type="html">&lt;p&gt;Humanoid robots would be a great platform business, if they worked.&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;img alt="MS Paint doodle of Bender from Futurama holding fistfuls of 100 dollar bills in front of the line go up emoji" src="images/0003_bender_money.png" style="width:80%; max-width:400px;"&gt;&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Brian Gawalt's Blog</title><link href="https://brian.gawalt.com/blog/" rel="alternate"></link><link href="https://brian.gawalt.com/blog/feeds/all.atom.xml" rel="self"></link><id>https://brian.gawalt.com/blog/</id><updated>2026-02-02T11:30:00-08:00</updated><entry><title>Why's Lasso Do That?</title><link href="https://brian.gawalt.com/blog/0004-lasso.html" rel="alternate"></link><published>2026-02-02T11:30:00-08:00</published><updated>2026-02-02T11:30:00-08:00</updated><author><name>Brian Gawalt</name></author><id>tag:brian.gawalt.com,2026-02-02:/blog/0004-lasso.html</id><summary type="html">&lt;p&gt;How the Lasso forces a zero-weight model: an end-to-end rundown.&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;img alt="MS Paint doodle of a purple lambda (the Greek alphabet character) twirling a
+lasso in the desert" src="/images/0004_lasso_twirl.png" style="width:80%; max-width:500px;"&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; this post makes heavy use of MathJax. If you're reading via RSS,
+you'll want to click through to the web version.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;My intuition of
+&lt;a href="https://en.wikipedia.org/wiki/Regularization_(mathematics)"&gt;regularization&lt;/a&gt; is:
+it's a compromise.  You want a model that fits your historical examples, but you
+also want a model that is "simple."  So you set some exchange rate -- the
+strength of regularization -- and trade off "fit my historical data" against "be
+a simple model." You meet somewhere in the middle: a model that's simpler than
+your unregularized fit would produce, but not &lt;em&gt;so&lt;/em&gt; simple to the point that it's
+missing obvious/reliable patterns in the training data.&lt;/p&gt;
+&lt;p&gt;In the biz, we call it a penalty on complexity, which is different than calling
+it a &lt;em&gt;ban&lt;/em&gt; on complexity.  We call it shrinking, which is different than calling
+it &lt;em&gt;vanishing.&lt;/em&gt;  These names reflect the intuition: penalize something to get
+less of it, but not none of it; shrink something to make it smaller, not
+to make it disappear.  With regularization, we'll reach some compromise point,
+and get a model that (a) is less well-fit to the training data than in the
+unregularized state, but also (b) not maximally, uselessly "simple."&lt;/p&gt;
+&lt;p&gt;This blog post is about how the world's most famous regression scheme,
+the Lasso (&lt;a href="https://www.jstor.org/stable/2346178"&gt;Tibshirani 1996&lt;/a&gt;), rejects
+compromise. For certain, sufficiently-high penalty rates, it will quite happily
+&lt;em&gt;only&lt;/em&gt; give you a maximally-simple model: one that zeros out consideration of
+any predictive features you handed it. No compromise, just an all-zeros empty
+model; "I found no pattern in the data."  And people love this about the Lasso!
+&lt;a href="https://www2.eecs.berkeley.edu/Pubs/TechRpts/2012/EECS-2012-252.html"&gt;My dissertation&lt;/a&gt;
+was built on this property, where Lasso regularization can zero out model
+weights.&lt;/p&gt;
+&lt;p&gt;But it's also weird to me that it's possible, given what I thought we were doing
+by regularizing a model fit.  It's not a compromise anymore.&lt;/p&gt;
+&lt;p&gt;Why's Lasso do that? &lt;/p&gt;
+&lt;h2&gt;What's Lasso?  (A convex optimization.)&lt;/h2&gt;
+&lt;p&gt;It's typical for statisticians to formalize "fit the data, but with a simple
+model" by posing an optimization task built on five raw ingredients:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Defining "the data" as a collection of &lt;span class="math"&gt;\(N\)&lt;/span&gt; examples, represented as
+    vector-scalar pairs,    &lt;span class="math"&gt;\(\left\{\vec{\mathbb{x}}_j, y_j\right\}_{j = 1}^N\)&lt;/span&gt;
+    Each &lt;span class="math"&gt;\(\vec{\mathbb{x}}_j\)&lt;/span&gt; is in &lt;span class="math"&gt;\(\mathbb{R}^p\)&lt;/span&gt; (call each of these an
+    example's &lt;em&gt;feature vector&lt;/em&gt;) and each &lt;span class="math"&gt;\(y_j\)&lt;/span&gt; is an example's scalar &lt;em&gt;label&lt;/em&gt;.&lt;/li&gt;
+&lt;li&gt;Defining the model as a vector of &lt;span class="math"&gt;\(p\)&lt;/span&gt; parameters,
+    &lt;span class="math"&gt;\(\vec{\mathbb{w}} \in \mathbb{R}^p\)&lt;/span&gt;.  Call each individual parameter (i.e.,
+    each vector element &lt;span class="math"&gt;\(w_i,~i = 1, \ldots, p\)&lt;/span&gt;), a &lt;em&gt;model weight.&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Defining a function,
+    &lt;span class="math"&gt;\(f\left(~\cdot~; \left\{\vec{\mathbb{x}}_j, y_j\right\}_{j = 1}^N\right): \mathbb{R}^p \to \mathbb{R}\)&lt;/span&gt;,
+    that expresses goodness-of-fit.  By construction of &lt;span class="math"&gt;\(f\)&lt;/span&gt;, a model parameter
+    vector that minimizes &lt;span class="math"&gt;\(f\)&lt;/span&gt; corresponds to a model that's "fitting the data"
+    to the best possible extent.  Call &lt;span class="math"&gt;\(f\)&lt;/span&gt; the &lt;em&gt;loss function&lt;/em&gt;.&lt;/li&gt;
+&lt;li&gt;Defining a function, &lt;span class="math"&gt;\(r: \mathbb{R}^p \to \mathbb{R}\)&lt;/span&gt;, that expresses
+    model simplicity.  A model parameter vector that minimizes this function
+    corresponds to a maximally simple model.  Call &lt;span class="math"&gt;\(r\)&lt;/span&gt; the &lt;em&gt;regularizer.&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Defining a scalar hyperparameter, &lt;span class="math"&gt;\(\lambda \geq 0\)&lt;/span&gt;, that defines the
+    strength of regularization.  The bigger &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt;, the more we favor &lt;span class="math"&gt;\(r\)&lt;/span&gt;
+    over &lt;span class="math"&gt;\(f\)&lt;/span&gt;.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Mixing these together, our optimization task is:&lt;/p&gt;
+&lt;div class="math"&gt;$$\vec{\mathbb{w}}^*(\lambda) := \arg \min_{\vec{\mathbb{w}} \in \mathbb{R}^p} f\left(\vec{\mathbb{w}}; \left\{\vec{\mathbb{x}}_j, y_j\right\}\right) + \lambda r(\vec{\mathbb{w}})$$&lt;/div&gt;
+&lt;h3&gt;Lasso's loss function&lt;/h3&gt;
+&lt;p&gt;Our loss function is defined as:&lt;/p&gt;
+&lt;div class="math"&gt;$$f\left(\vec{\mathbb{w}}; \left\{\vec{\mathbb{x}}_j, y_j\right\}_{j = 1}^N\right) = \sum_{j=1}^N{\left(\vec{\mathbb{w}}^T\vec{\mathbb{x}}_j - y_j\right)^2}$$&lt;/div&gt;
+&lt;p&gt;That's:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;the sum, over the features-and-label pairs for all &lt;span class="math"&gt;\(N\)&lt;/span&gt; examples,&lt;/li&gt;
+&lt;li&gt;of the square&lt;/li&gt;
+&lt;li&gt;of the difference&lt;/li&gt;
+&lt;li&gt;between the actual label &lt;span class="math"&gt;\(y_j\)&lt;/span&gt;&lt;/li&gt;
+&lt;li&gt;and the dot product of &lt;span class="math"&gt;\(\vec{\mathbb{w}}\)&lt;/span&gt; and &lt;span class="math"&gt;\(\vec{\mathbb{x}}_j\)&lt;/span&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The model weights "fit the data" by producing a weighted sum of the example's
+features that is a reliably close match to the example's scalar label.
+The loss function is a sum of squares, so it's always non-negative.  The closer
+it is to zero, the better the average label match we are getting from our model
+weights.  Minimize the loss function to best fit the data, just how we wanted.&lt;/p&gt;
+&lt;h3&gt;Lasso's regularizer&lt;/h3&gt;
+&lt;p&gt;Our regularizer is:&lt;/p&gt;
+&lt;div class="math"&gt;$$r\left(\vec{\mathbb{w}}\right) = \left|\left|\vec{\mathbb{w}}\right|\right|_1 = \sum_{i=1}^p\left|w_i\right|$$&lt;/div&gt;
+&lt;p&gt;the &lt;span class="math"&gt;\(L_1\)&lt;/span&gt; norm of our model weight vector.  Models with weights that are
+reliably close to zero count as "simpler" than ones with larger-magnitude 
+weights.  Just like &lt;span class="math"&gt;\(f\)&lt;/span&gt;, &lt;span class="math"&gt;\(r\)&lt;/span&gt; is always non-negative.  We can minimize it by
+choosing a weight vector of &lt;em&gt;all zeroes.&lt;/em&gt;  The model that always picks "zero" as
+its guess for &lt;span class="math"&gt;\(y\)&lt;/span&gt;, totally ignoring the example's features, is this
+regularizer's simplest possible model.&lt;/p&gt;
+&lt;h3&gt;Lasso's convexity&lt;/h3&gt;
+&lt;p&gt;Altogether, the optimization task is:&lt;/p&gt;
+&lt;div class="math"&gt;$$\vec{\mathbb{w}}^*(\lambda) := \arg \min_{\vec{\mathbb{w}} \in \mathbb{R}^p} f\left(\vec{\mathbb{w}}; \left\{\vec{\mathbb{x}}_j, y_j\right\}\right) + \lambda r(\vec{\mathbb{w}})$$&lt;/div&gt;
+&lt;p&gt;Take on faith that this mixture of &lt;span class="math"&gt;\(f\)&lt;/span&gt;, &lt;span class="math"&gt;\(r\)&lt;/span&gt;, and &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; is convex.
+&lt;span class="math"&gt;\(f\)&lt;/span&gt; and &lt;span class="math"&gt;\(r\)&lt;/span&gt; are both convex, and &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; is non-negative, which lets us argue&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;the scaling-up of a convex function by a non-negatve value is itself convex,
+    so &lt;span class="math"&gt;\(\lambda r(\vec{\mathbb{w}})\)&lt;/span&gt; is also convex, &lt;/li&gt;
+&lt;li&gt;the sum of two convex functions is itself convex, so the overall mixture
+    &lt;span class="math"&gt;\((f + \lambda r)\)&lt;/span&gt; we're minimizing is convex.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Convex functions come with a lot of nice properties I will leverage later on, so
+I want to emphasize the convexity of our optimization task now.&lt;/p&gt;
+&lt;h3&gt;Dropping down to univariate Lasso&lt;/h3&gt;
+&lt;p&gt;At this point, we'll take a special case: when &lt;span class="math"&gt;\(p\)&lt;/span&gt; is 1.  This univariate
+regression means both (a) our weight and (b) each example's feature "vector",
+are just plain ol' scalars.  Our optimization task, with &lt;span class="math"&gt;\(w \in \mathbb{R}\)&lt;/span&gt;
+and &lt;span class="math"&gt;\(x_j \in \mathbb{R}\)&lt;/span&gt;:&lt;/p&gt;
+&lt;div class="math"&gt;$$w^*(\lambda) := \arg \min_{w \in \mathbb{R}} \sum_{j=1}^N{\left(w \cdot x_j - y_j\right)^2} + \lambda\left|w\right|$$&lt;/div&gt;
+&lt;p&gt;I promise we're reinflate this to the multivariate case before we're done.
+Lasso's convexity will help a lot with that.&lt;/p&gt;
+&lt;p&gt;But now that we're down here, we celebrate that low dimensionality means we can
+make charts.  Charts!&lt;/p&gt;
+&lt;p&gt;Here's a dataset with a clear relationship between &lt;span class="math"&gt;\(x\)&lt;/span&gt; and &lt;span class="math"&gt;\(y\)&lt;/span&gt;.  The data are
+plotted as blue dots.  I fit three Lasso models to this dataset, with &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt;
+taking on values of 0, 350, or 800.  I overlay the dashed trendlines each model
+produces for the range of &lt;span class="math"&gt;\(x\)&lt;/span&gt;'s, and we see those three trendlines decay from
+a slope of 1 to a totally null (maximally simple!) slope of zero:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="A scatterplot of blue dots whose x values are uniformly distributed from -3 to
+3.  Their y values largely track the x values, up to an additive factor of
++/- 0.5 or so.  Three dashed lines pass through the origin, colored blue,
+purple, and red.  They correspond to model predictions from an unregularized
+(slope of 1.037), moderately regularized (slope 0.461), and heavily regularized
+(slope 0) Lasso fit." src="/images/0004_a_scatterplot.png"&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The model with least regularization, &lt;span class="math"&gt;\(\lambda = 0\)&lt;/span&gt; in blue, has a trendline
+   that best fits the data.&lt;/li&gt;
+&lt;li&gt;The purple line, &lt;span class="math"&gt;\(\lambda = 350\)&lt;/span&gt;, is not a great fit to the data, but at
+   least is directionally correct when it identifies a positive correlation
+   between the example feature &lt;span class="math"&gt;\(x\)&lt;/span&gt; and the example label &lt;span class="math"&gt;\(y\)&lt;/span&gt;.&lt;/li&gt;
+&lt;li&gt;The red line, &lt;span class="math"&gt;\(\lambda = 800\)&lt;/span&gt;, totally ignores &lt;span class="math"&gt;\(x\)&lt;/span&gt; and always predicts that
+   &lt;span class="math"&gt;\(y\)&lt;/span&gt; is zero.  This is what you get when &lt;span class="math"&gt;\(w^*\)&lt;/span&gt; is maximizing &lt;span class="math"&gt;\(r\)&lt;/span&gt; with no
+   regard for &lt;span class="math"&gt;\(f\)&lt;/span&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;If we repeatedly produce a model weight &lt;span class="math"&gt;\(w^*(\lambda)\)&lt;/span&gt; for many more values of
+&lt;span class="math"&gt;\(\lambda\)&lt;/span&gt;, we can see this decay evolve in more detail (with our three models
+above appearing as special large dots):&lt;/p&gt;
+&lt;p&gt;&lt;img alt="The regularization path that results from sweeping lambda from 0 to 800 or so.
+The y-axis is labelled w*(lambda), ranging from 0 to just over 1.  The graph's
+title is &amp;quot;Regularization Path&amp;quot;.  A single red series starts as a straight red
+line from  the point (0, 1.037) to (630, 0), connecting to another straight red
+line from (630, 0) to (950, 0).  Three dots appear, a blue one at (0, 1.037),
+purple at (350, 0.461), and red at (800, 0)." src="/images/0004_b_regularization_path.png"&gt;&lt;/p&gt;
+&lt;p&gt;As regularization strength increases, the resulting model weight drops linearly,
+until it hits absolute zero.  Early on, you see compromise between &lt;span class="math"&gt;\(f\)&lt;/span&gt; and &lt;span class="math"&gt;\(r\)&lt;/span&gt;:
+&lt;span class="math"&gt;\(f\)&lt;/span&gt; wants a slope of 1, and &lt;span class="math"&gt;\(r\)&lt;/span&gt; wants a slope of 0, and as we strengthen &lt;span class="math"&gt;\(r\)&lt;/span&gt;'s
+negotiating leverage, we get models that look more and more like what &lt;span class="math"&gt;\(r\)&lt;/span&gt; wants.
+Not &lt;em&gt;entirely&lt;/em&gt; what &lt;span class="math"&gt;\(r\)&lt;/span&gt; wants: we still pick up on the positive correlation that
+lives in the data.  We don't discard &lt;span class="math"&gt;\(f\)&lt;/span&gt;'s fit-the-data contributions entirely.&lt;/p&gt;
+&lt;p&gt;But past &lt;span class="math"&gt;\(\lambda \approx 630\)&lt;/span&gt; or so (spoiler: I give you the exact formula for
+this breakpoint a few sections from now), the optimization is ignoring the &lt;span class="math"&gt;\(f\)&lt;/span&gt;
+completely. That fit-the-data component is still there as part of the objective
+to be minimized, and yet there's no compromise: the model weight returns what
+&lt;span class="math"&gt;\(r\)&lt;/span&gt; wants, and only what &lt;span class="math"&gt;\(r\)&lt;/span&gt; wants.  It's &lt;em&gt;like&lt;/em&gt; &lt;span class="math"&gt;\(f\)&lt;/span&gt; isn't even there, except it
+&lt;em&gt;is.&lt;/em&gt;  We never zero'ed &lt;span class="math"&gt;\(f\)&lt;/span&gt;, we just amp'ed up &lt;span class="math"&gt;\(r\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;What's Lasso doing?  Why's Lasso do that?&lt;/p&gt;
+&lt;h2&gt;What's Lasso doing?  (Parabolas.)&lt;/h2&gt;
+&lt;p&gt;Lasso is making our optimizer follow the instructions of a pair of parabolas.
+When we strengthen regularization past a certain point, we're not able to make
+either parabola happy, and bounce back and forth between them until we're stuck
+at &lt;span class="math"&gt;\(w^* = 0\)&lt;/span&gt;.&lt;/p&gt;
+&lt;h3&gt;Zero regularization&lt;/h3&gt;
+&lt;p&gt;When there's no regularization at all, at &lt;span class="math"&gt;\(\lambda = 0\)&lt;/span&gt;, our optimizer's
+objective is just to minimize the loss function &lt;span class="math"&gt;\(f\)&lt;/span&gt;, the sum of squared errors:&lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{align}w^*(0) &amp;amp;= \arg \min_{w \in \mathbb{R}^p} f\left(w; \left\{x_j, y_j\right\}\right)\\
+  &amp;amp;= \arg \min_{w \in \mathbb{R}} \sum_{j=1}^N{\left(wx_j - y_j\right)^2}\end{align}$$&lt;/div&gt;
+&lt;p&gt;If we rearrange &lt;span class="math"&gt;\(f\)&lt;/span&gt;'s terms a bit, we'll see it's a parabola as a function of
+&lt;span class="math"&gt;\(w\)&lt;/span&gt;:&lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{align}f\left(w; \left\{x_j, y_j\right\}\right) &amp;amp;= \sum_{j=1}^N{\left(wx_j - y_j\right)^2}\\
+  &amp;amp;= \sum_{j=1}^N \left[x_j^2 w^2 - 2 x_j y_j w + y_j^2\right] \\
+  &amp;amp;= \left[\sum_{j=1}^N x_j^2\right] w^2 - 2\left[\sum_{j=1}^N (x_j y_j)\right] w + \left[\sum_{j=1}^N y_j^2\right]\end{align}$$&lt;/div&gt;
+&lt;p&gt;Define some helpful aliases for those terms,&lt;/p&gt;
+&lt;div class="math"&gt;$$S_x := \sum_{j=1}^N x_j^2~~~~D_{xy} := \sum_{j=1}^N (x_j y_j)~~~~S_y := \sum_{j=1}^N y_j^2$$&lt;/div&gt;
+&lt;p&gt;where &lt;span class="math"&gt;\(S\)&lt;/span&gt;'s stand for sums of squares our features or labels and &lt;span class="math"&gt;\(D\)&lt;/span&gt; stands for
+a dot product of feature and label.  That makes the parabolaness of the
+unregularized loss function really stand out:&lt;/p&gt;
+&lt;div class="math"&gt;$$f\left(w; \left\{x_j, y_j\right\}\right) = S_xw^2 - 2D_{xy}w + S_y$$&lt;/div&gt;
+&lt;p&gt;The vertex of a parabola like this lies at the famous "&lt;span class="math"&gt;\(-b/2a\)&lt;/span&gt;" point, which
+means &lt;span class="math"&gt;\(f\)&lt;/span&gt; is minimized at:&lt;/p&gt;
+&lt;div class="math"&gt;$$w^*(0) = \frac{-(-2D_{xy})}{2S_x} = \frac{D_{xy}}{S_x}$$&lt;/div&gt;
+&lt;p&gt;(Or, expanding those terms for the fun of it:)&lt;/p&gt;
+&lt;div class="math"&gt;$$w^*(0) = \frac{\sum_{j=1}^N (x_j y_j)}{\sum_{j=1}^N x_j^2}$$&lt;/div&gt;
+&lt;p&gt;Let's plot &lt;span class="math"&gt;\(f\left(w; \left\{x_j, y_j\right\}\right)\)&lt;/span&gt; for the blue-dots dataset
+we used above:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="A blue convex parabola, crossing the y axis at around 340, hitting its minimum
+at the point (1.038, 13.9), with its axis of symmetry added as a vertical blue
+dashed line" src="/images/0004_c_parabola_zero_reg.png"&gt;&lt;/p&gt;
+&lt;p&gt;We use an optimization routine that implements some kind of descent method to
+start with any arbitrary guess at the &lt;span class="math"&gt;\(w\)&lt;/span&gt; that minimizes &lt;span class="math"&gt;\(f\)&lt;/span&gt;, then refines it
+until it finds the actual minimum.  Imagine this optimization routine as a
+little guy, wandering back and forth along the range of &lt;span class="math"&gt;\(w\)&lt;/span&gt; to minimize &lt;span class="math"&gt;\(f\)&lt;/span&gt;.
+Lasso's loss function parabola gives our little optimizer guy unambiguous
+instructions:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Wherever you are right now, move towards &lt;span class="math"&gt;\((D_{xy}/S_x)\)&lt;/span&gt;.  As long as each step
+puts you lower than you were before, you will find the minimum.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;If the little optimizer guy loops that enough, he'll land at &lt;span class="math"&gt;\(w^*(0)\)&lt;/span&gt;.&lt;/p&gt;
+&lt;h3&gt;Some regularization&lt;/h3&gt;
+&lt;p&gt;When we increase &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; to some positive value, we're adding &lt;span class="math"&gt;\(\lambda r(w)\)&lt;/span&gt;
+to the function we want our little optimizer guy to minimize.  That scaled 
+regularizer is a function that looks like:&lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{align}\lambda r(w) &amp;amp;= \lambda\left|w\right| \\
+  &amp;amp;= \begin{cases}
+        -\lambda w &amp;amp;\text{if}~w &amp;lt; 0~~\mbox{(LHS)} \\
+        \lambda w &amp;amp;\text{if}~w \geq 0~~\mbox{(RHS)}
+        \end{cases}
+\end{align}$$&lt;/div&gt;
+&lt;p&gt;It's a piecewise linear function, with a negative slope on the left-hand side
+(LHS) and positive slope on the right-hand side (RHS).  When we add &lt;span class="math"&gt;\(f\)&lt;/span&gt; to this,
+we wind up with a piecewise quadratic function:&lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{align}f(w) + \lambda r(w) &amp;amp;= f(w) + \lambda\left|w\right| \\
+    &amp;amp;= \begin{cases}
+          f(w) -\lambda w &amp;amp;\text{if}~w &amp;lt; 0~~\mbox{(LHS)} \\
+          f(w) + \lambda w &amp;amp;\text{if}~w \geq 0~~\mbox{(RHS)}
+    \end{cases} \\
+    &amp;amp;= \begin{cases}
+          S_xw^2 - 2D_{xy}w + S_y -\lambda w&amp;amp;\text{if}~w &amp;lt; 0~~\mbox{(LHS)} \\
+          S_xw^2 - 2D_{xy}w + S_y + \lambda w&amp;amp;\text{if}~w \geq 0~~\mbox{(RHS)}
+    \end{cases} \\
+    &amp;amp;= \begin{cases}
+          S_xw^2 - (2D_{xy} + \lambda)w + S_y &amp;amp;\text{if}~w &amp;lt; 0~~\mbox{(LHS)} \\
+          S_xw^2 - (2D_{xy} - \lambda) w + S_y &amp;amp;\text{if}~w \geq 0~~\mbox{(RHS)}
+    \end{cases}
+\end{align}$$&lt;/div&gt;
+&lt;p&gt;These two parabolas, LHS and RHS, have "&lt;span class="math"&gt;\(-b/2a\)&lt;/span&gt;" vertices aligned at:&lt;/p&gt;
+&lt;div class="math"&gt;$$\mbox{LHS vertex:}~~w_{LHS}(\lambda) = \frac{2D_{xy} + \lambda}{2S_x}$$&lt;/div&gt;
+&lt;div class="math"&gt;$$\mbox{RHS vertex:}~~w_{RHS}(\lambda) = \frac{2D_{xy} - \lambda}{2S_x}$$&lt;/div&gt;
+&lt;p&gt;&lt;em&gt;This&lt;/em&gt; function provides our little-guy optimizer a more complicated set of
+instructions:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;While you are on the LHS:&lt;/strong&gt; take descent steps towards
+   &lt;span class="math"&gt;\((2D_{xy} + \lambda)/(2S_x)\)&lt;/span&gt;.  If your latest step took you out of the LHS,
+   this rule no longer applies.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;While you are on the RHS:&lt;/strong&gt; take descent steps towards
+   &lt;span class="math"&gt;\((2D_{xy} - \lambda)/(2S_x)\)&lt;/span&gt;.  If your latest step took you out of the RHS,
+   this rule no longer applies.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;When regularization is non-zero, but light, the optimizer can resolve this
+without too much extra effort.  We saw a case like that above, when we set
+&lt;span class="math"&gt;\(\lambda = 350\)&lt;/span&gt; for our blue-dots dataset. Here's what the mixed objective
+looks like, where the purple series is the sum of the blue and the red:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Our blue parabola from &amp;quot;zero regularization&amp;quot; now joined by a red scaled 
+absolute value function that passes through (1, 350).  Both these are mostly
+transparent, they are called &amp;quot;f(w)&amp;quot; and &amp;quot;lambda r(w)&amp;quot; in the legend at the 
+bottom of the figure.  Their sum, a thicker, opaque purple series, looks an
+awful lot like a parabola." src="/images/0004_d_parabola_some_reg.png"&gt;&lt;/p&gt;
+&lt;p&gt;Imagine the little guy starts at &lt;span class="math"&gt;\(w = -1\)&lt;/span&gt;.  His thought process is:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;"I am starting on the LHS.  The LHS instructions say I should head to
+    &lt;span class="math"&gt;\(w = (2D_{xy} + \lambda)/(2S_x)\)&lt;/span&gt;."&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;[later:]&lt;/strong&gt; "I've taken a lot of steps, and not reached
+    &lt;span class="math"&gt;\((2D_{xy} + \lambda)/(2S_x)\)&lt;/span&gt;, and I have in fact crossed the &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt; border.
+    I'm on the RHS now.  My instructions from Step 1 no longer apply."&lt;/li&gt;
+&lt;li&gt;"My new instructions, now that I'm on the RHS, say to head to
+    &lt;span class="math"&gt;\(w = (2D_{xy} - \lambda)/(2S_x)\)&lt;/span&gt; instead."&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;[later:]&lt;/strong&gt; "OK, made it.  I am at the vertex of the RHS parabola, which
+    is on the RHS (i.e., I never re-crossed the &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt; border)."&lt;/li&gt;
+&lt;li&gt;"My instructions are still the same as they were in Step 3, and I've
+    finished following them.
+    &lt;a href="https://www.youtube.com/watch?v=5r06heQ5HsI"&gt;Job's done.&lt;/a&gt;"&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;The difference between &lt;span class="math"&gt;\(w^*(0)\)&lt;/span&gt; to &lt;span class="math"&gt;\(w^*(350)\)&lt;/span&gt; is &lt;em&gt;shrinkage&lt;/em&gt;: the vertex of the
+RHS parabola is &lt;span class="math"&gt;\(-\frac{\lambda}{2S_x}\)&lt;/span&gt; units smaller than the zero-regularization
+vertex:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Same as previous image, but with the vertices of the blue and purple
+parabolas drawn with large blue/purple dots.  Two vertical dashed guidelines
+mark the axes of symmetry for the parabolas, and a left-pointing arrow going
+from the blue axis to the purple axis is labeled &amp;quot;-λ/(2Sx)&amp;quot;" src="/images/0004_e_parabola_some_reg_vertices.png"&gt;&lt;/p&gt;
+&lt;p&gt;Neither &lt;span class="math"&gt;\(f\)&lt;/span&gt; nor &lt;span class="math"&gt;\(r\)&lt;/span&gt; are minimized at that points where they intersect the purple
+vertex axis of symmetry.  Both could be much smaller, if they didn't have to
+accommodate the other.  That's a good compromise: one that leaves everyone
+angry.&lt;/p&gt;
+&lt;h3&gt;Lots of regularization&lt;/h3&gt;
+&lt;p&gt;When we ramp up our value of &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; from 350 to 800 on our blue-dots example,
+nothing about the rules change for our little-guy optimizer.  What does change
+is the layout of the two parabolae: now, neither parabola's vertex lies on the
+side its rule governs:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Our blue parabola from &amp;quot;zero regularization&amp;quot; joined by a steeper red scaled 
+absolute value function that passes through (0.5, 350).  Both these are mostly
+transparent, they are called &amp;quot;f(w)&amp;quot; and &amp;quot;lambda r(w)&amp;quot; in the legend at the 
+bottom of the figure.  Their sum, a thicker, opaque red series, no longer looks
+like a parabola, it now looks like a Greek nu character with it point at
+(0, 320)." src="/images/0004_f_parabola_lots_reg.png"&gt;&lt;/p&gt;
+&lt;p&gt;The thought process for our little guy is:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;"When I'm on the LHS, it wants me to go to
+    &lt;span class="math"&gt;\(\left(2D_{xy} + \lambda\right)/(2S_x)\)&lt;/span&gt;, which is on the RHS."&lt;/li&gt;
+&lt;li&gt;"But then when I get to the RHS, &lt;em&gt;it&lt;/em&gt; wants me to go look for a minimum at
+     &lt;span class="math"&gt;\(\left(2D_{xy} - \lambda\right)/(2S_x)\)&lt;/span&gt;, which is back on the LHS.
+     I just came from there!!"&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;For some optimizers, this bouncing back and forth can take awhile to resolve.
+But when it does resolve, it can only end at &lt;span class="math"&gt;\(w^*(800) = 0\)&lt;/span&gt;, the maximally
+simple model weight.&lt;/p&gt;
+&lt;p&gt;When does this happen?  It happens when both the LHS and RHS parabolae have
+vertices centered on the opposite side.  This can happen no matter the sign of
+&lt;span class="math"&gt;\(D_{xy}\)&lt;/span&gt;, so long as &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; is big enough.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;If &lt;span class="math"&gt;\(D_{xy} &amp;gt; 0\)&lt;/span&gt;, the unregularized vertex is on the RHS.  Ramping &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt;
+   such that the RHS vertex &lt;span class="math"&gt;\(\left(2D_{xy} - \lambda\right)/(2S_x)\)&lt;/span&gt; is
+   pushed to the LHS means:
+   &lt;div class="math"&gt;$$2D_{xy} - \lambda &amp;lt; 0 \Rightarrow \lambda &amp;gt; 2D_{xy}$$&lt;/div&gt;
+&lt;/li&gt;
+&lt;li&gt;If &lt;span class="math"&gt;\(D_{xy} &amp;lt; 0\)&lt;/span&gt;, the unregularized vertex is on the LHS.  Ramping &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt;
+   such that &lt;span class="math"&gt;\(\left(2D_{xy} + \lambda\right)/(2S_x)\)&lt;/span&gt; falls on the RHS means:
+   &lt;div class="math"&gt;$$2D_{xy} + \lambda &amp;gt; 0 \Rightarrow \lambda &amp;gt; -2D_{xy}$$&lt;/div&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;We can combine these two criteria -- "if &lt;span class="math"&gt;\(D_{xy}\)&lt;/span&gt; is positive, double it" and
+"if &lt;span class="math"&gt;\(D_{xy}\)&lt;/span&gt; is negative, negate it, then double it" -- into one rule that
+determines when our minimum will be at &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt;:&lt;/p&gt;
+&lt;div class="math"&gt;$$\lambda &amp;gt; 2|D_{xy}|$$&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;This is the magic threshold for Lasso.&lt;/strong&gt;  Past this level of regularization,
+we can only get the empty model out of the optimization.&lt;/p&gt;
+&lt;p&gt;Checking my work: in the blue-dot case, &lt;span class="math"&gt;\(D_{xy} = 314.7\)&lt;/span&gt;, and the
+"Regularization Path" figure shows that &lt;span class="math"&gt;\(w^*(\lambda)\)&lt;/span&gt; hits zero right where we
+expect, around &lt;span class="math"&gt;\(2 \times 314.7 = 629.4 \approx 630\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;It's good to know Lasso has this magic threshold: often we will tune the
+regularization parameter so that we can find a model that works well on held-out
+test data.  With this magic threshold, we can put an upper bound on our search
+space: past &lt;span class="math"&gt;\(2|D_{xy}|\)&lt;/span&gt;, we will always get the same zero-model result.  We
+don't need to keep searching past that threshold value. That's useful!&lt;/p&gt;
+&lt;h2&gt;Why's Lasso do that? (Discontinuous slope.)&lt;/h2&gt;
+&lt;p&gt;The slope of our Lasso objective looks like:&lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{align}\frac{d}{dw}\left\{f(w) + \lambda r(w)\right\} &amp;amp;= \frac{d}{dw}f(w) + \lambda\frac{d}{dw}\left|w\right| \\
+&amp;amp;= \frac{d}{dw}\left\{S_xw^2 - 2D_{xy}w + S_y\right\} + + \lambda\frac{d}{dw}\left|w\right| \\
+&amp;amp;= 2S_xw - 2D_{xy} + \lambda\frac{d}{dw}\left|w\right| \end{align}$$&lt;/div&gt;
+&lt;p&gt;Note that part and parcel of Lasso's convexity means this slope is never
+decreasing.  In this univariate case, that's the definition of a convex
+function, which we know Lasso to be.&lt;/p&gt;
+&lt;p&gt;The derivative for our regularizer hits a snag at &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt;; the slope tangent
+to &lt;span class="math"&gt;\(|w|\)&lt;/span&gt; depends on whether you mean "sloping in from the LHS" or "sloping in
+from the RHS":&lt;/p&gt;
+&lt;div class="math"&gt;$$\lambda\frac{d}{dw}|w| = \begin{cases}
+          -\lambda&amp;amp;\text{if}~w &amp;lt; 0 \\
+          \mbox{undefined}&amp;amp;\text{if}~w = 0 \\
+          \lambda&amp;amp;\text{if}~w &amp;gt; 0
+    \end{cases}$$&lt;/div&gt;
+&lt;div class="math"&gt;$$\frac{d}{dw}\left\{f(w) + \lambda r(w)\right\} = \begin{cases}
+          2S_xw - 2D_{xy} - \lambda&amp;amp;\text{if}~w &amp;lt; 0 \\
+          \mbox{undefined}&amp;amp;\text{if}~w = 0 \\
+          2S_xw - 2D_{xy} + \lambda&amp;amp;\text{if}~w &amp;gt; 0
+    \end{cases}$$&lt;/div&gt;
+&lt;p&gt;We can plot this for the zero-, some-, and lots-of-regularization models fit to
+the blue-dot data, where we see a steadily larger discontinutiy at &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt;:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="A line plot titled &amp;quot;Slopes of lasso objectives&amp;quot; with an x-axis labelled &amp;quot;w&amp;quot;
+and three series:
+(1) in blue, a straight line with slope of 650 and intercept of -650 or so, with
+a big blue dot marking its x intercept around 1.0;
+(2) in purple, a piecewise linear function where both pieces have slope 650, but
+a breakage at w=0, with intercepts of -1000 and 250 on either side, with a big
+purple dot marking its x intercept around 0.49;
+(3) in red, a piecewise linear function where both pieces have slope 650, but
+a breakage at w=0, with intercepts of -1450 and 150" src="/images/0004_g_slopes.png"&gt;&lt;/p&gt;
+&lt;p&gt;(Side note: in an alternate case where &lt;span class="math"&gt;\(D_{xy}\)&lt;/span&gt; is negative, this plot of
+slopes will look very similar.  Lasso is still convex, so these slope curves
+must still all be non-decreasing.  The difference would be that the blue and
+purple vertical-axis-intercepts would be positive instead of negative.)&lt;/p&gt;
+&lt;p&gt;For zero- and some-regularization, the blue and purple lines, we see
+intersection with the horizontal axis at the same points we see the vertices of
+their respective parabolae above: &lt;span class="math"&gt;\(w\)&lt;/span&gt; values where our Lasso objective has
+zero slope.&lt;/p&gt;
+&lt;p&gt;But with lots-of-regularization, there's no similar intersection.  The
+discontinuity introduced by &lt;span class="math"&gt;\(\lambda r(w)\)&lt;/span&gt; is large enough
+that, at &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt;, the slope jumps straight from "very negative" to "slightly
+positive." This pseudo-intersection with the horizontal axis determines where
+our little-guy optimizer halts, just like the genuine points of zero slope in
+the blue and purple models.&lt;/p&gt;
+&lt;p&gt;Looking at the slope discontinuity explains Lasso's magic threshold 
+&lt;span class="math"&gt;\(\lambda &amp;gt; 2|D_{xy}|\)&lt;/span&gt; in a way that generalizes to other loss functions for &lt;span class="math"&gt;\(f\)&lt;/span&gt;.
+The regularizer is acting like a kind of crowbar, chiseled into the
+unregularized objective at the point &lt;span class="math"&gt;\((w, f'(w))\)&lt;/span&gt;, and prying the LHS and RHS
+apart from each other by an additive factor of &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;Our blue slope line has a non-zero value at &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt;.  For &lt;span class="math"&gt;\(\lambda|w|\)&lt;/span&gt; to
+introduce a sign change in the slope, it either needs to push a positive &lt;span class="math"&gt;\(f'(0)\)&lt;/span&gt;
+below the horizontal axis, or (as in the blue-dots example here) push a negative
+&lt;span class="math"&gt;\(f'(0)\)&lt;/span&gt; above the horizontal axis.  As in, we get the maximally-simple model
+whenever we set:&lt;/p&gt;
+&lt;div class="math"&gt;$$\lambda \geq \left|f'(0)\right|$$&lt;/div&gt;
+&lt;p&gt;For original-recipe Lasso, where our loss &lt;span class="math"&gt;\(f\)&lt;/span&gt; is the ordinary least squares
+function, &lt;span class="math"&gt;\(f'(0) = 2D_{xy}\)&lt;/span&gt;.  Plug that in above and recover the magic
+threshold. Without any regularization (for &lt;span class="math"&gt;\(D_{xy} &amp;gt; 0\)&lt;/span&gt; here, but the logic
+holds in the mirror case, too), &lt;span class="math"&gt;\(f(w)\)&lt;/span&gt; decreases as you move from &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt; into
+the RHS.  Even with &lt;em&gt;some&lt;/em&gt; regularization, &lt;span class="math"&gt;\(f(w) + \lambda r(w)\)&lt;/span&gt; decreases as
+you move into the RHS -- it has a negative slope at &lt;span class="math"&gt;\(w = 0^+\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;In sum,&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The function we're optimizing is convex, so its slope is non-decreasing.  If
+   out little guy is ever at a point where the slope is negative, it must move
+   right to hope to reach a minimum where the slope is zero.  And if it's ever
+   at a point of positive slope, it must move left.&lt;/li&gt;
+&lt;li&gt;With the discontinuity of Lasso's regularizer, we see two different slopes at
+   &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt;, depending if we approach 0 from the LHS or the RHS.&lt;/li&gt;
+&lt;li&gt;When &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; is big enough, relative to the slope &lt;span class="math"&gt;\(f'(0)\)&lt;/span&gt;, these two slopes
+   will have opposite signs.  The sign of
+   &lt;span class="math"&gt;\(\left[f'(-\epsilon) + \lambda r(-\epsilon)\right]\)&lt;/span&gt; will be negative, and the
+   sign of &lt;span class="math"&gt;\(\left[f'(-\epsilon) + \lambda r(-\epsilon)\right]\)&lt;/span&gt; will be positive,
+   for any &lt;span class="math"&gt;\(\epsilon &amp;gt; 0\)&lt;/span&gt;.&lt;/li&gt;
+&lt;li&gt;And so we get stuck right at &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt;.  Try to move a bit left off zero,
+   to &lt;span class="math"&gt;\(w = 0^-\)&lt;/span&gt;, and you will sense a negative slope, and get told to move back
+   right.  Try to move a bit right, to &lt;span class="math"&gt;\(w = 0^+\)&lt;/span&gt;, and get told to move back
+   left.&lt;/li&gt;
+&lt;li&gt;The little guy optimizer gets driven to &lt;span class="math"&gt;\(w = 0\)&lt;/span&gt; itself, and can't go anywhere
+   else.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;That's why Lasso does that.&lt;/p&gt;
+&lt;h2&gt;Returning to multiple features&lt;/h2&gt;
+&lt;p&gt;This same phenomenon applies even when we reinflate from &lt;span class="math"&gt;\(p = 1\)&lt;/span&gt; univariate
+feature, back to the &lt;span class="math"&gt;\(p &amp;gt; 1\)&lt;/span&gt; multivariate case.  Lasso does this in high
+dimensions, too.&lt;/p&gt;
+&lt;p&gt;Bringing back our original &lt;span class="math"&gt;\(N\)&lt;/span&gt; vector-scalar pairs,
+&lt;span class="math"&gt;\(\left\{\vec{\mathbb{x}}_j, y_j\right\}_{j = 1}^N\)&lt;/span&gt;, I'm going to define some
+new helper aliases.  First, imagine stacking all the feature vectors,
+transposed horizontally, into a matrix
+&lt;span class="math"&gt;\(\mathbf{X} \in \mathbb{R}^{N \times p}\)&lt;/span&gt;:&lt;/p&gt;
+&lt;div class="math"&gt;$$\mathbf{X} = \left[\begin{array}{c} ~~- \vec{\mathbb{x}}_1^T -~~ \\
+\vdots \\
+~~- \vec{\mathbb{x}}_j^T -~~ \\
+\vdots \\
+~~- \vec{\mathbb{x}}_N^T -~~ \\
+\end{array}\right]$$&lt;/div&gt;
+&lt;p&gt;Now imagine pulling out the &lt;span class="math"&gt;\(i\)&lt;/span&gt;th column from that matrix: it encodes the
+&lt;span class="math"&gt;\(i\)&lt;/span&gt;th predictive feature for each datum &lt;span class="math"&gt;\(j = 1, \ldots, N\)&lt;/span&gt;.  Call each of these
+column vectors &lt;span class="math"&gt;\(\vec{\mathbb{x}}^{(i)} \in \mathbb{R}^N\)&lt;/span&gt;, &lt;span class="math"&gt;\(i = 1, \ldots, p\)&lt;/span&gt;:&lt;/p&gt;
+&lt;div class="math"&gt;$$\mathbf{X} = \left[\begin{array}{c} ~~- \vec{\mathbb{x}}_1^T -~~ \\
+\vdots \\
+~~- \vec{\mathbb{x}}_j^T -~~ \\
+\vdots \\
+~~- \vec{\mathbb{x}}_N^T -~~ \\
+\end{array}\right] = \left[\begin{array}{ccccc}
+\vert &amp;amp; &amp;amp; \vert &amp;amp; &amp;amp; \vert \\
+\vec{\mathbb{x}}^{(1)} &amp;amp; \cdots &amp;amp; \vec{\mathbb{x}}^{(i)} &amp;amp; \cdots &amp;amp; \vec{\mathbb{x}}^{(p)} \\
+\vert &amp;amp; &amp;amp; \vert &amp;amp; &amp;amp; \vert \\
+\end{array}\right]$$&lt;/div&gt;
+&lt;p&gt;And let's also pull the labels &lt;span class="math"&gt;\(y_j\)&lt;/span&gt; into their own column vector:&lt;/p&gt;
+&lt;div class="math"&gt;$$\vec{\mathbb{y}} = \left[\begin{array}{c} y_1 \\
+\vdots \\
+y_N
+\end{array}\right] \in \mathbb{R}^N$$&lt;/div&gt;
+&lt;p&gt;Imagine, for our multivariate dataset, we have currently set our little-guy
+optimizer at the fully sparse, all-zeros weight vector,
+&lt;span class="math"&gt;\(\vec{\mathbb{w}} = \vec{\mathbb{0}}\)&lt;/span&gt;.  What would it take to convince the
+little guy to move any single model weight off of zero?&lt;/p&gt;
+&lt;p&gt;The little guy can consider each feature, &lt;span class="math"&gt;\(\vec{\mathbb{x}}^{(i)}\)&lt;/span&gt;, one at a
+time, as if each were its own individual univariate Lasso case.  The current
+weight vector ignores &lt;em&gt;every&lt;/em&gt; feature, so the question of "should we put any
+weight on feature &lt;span class="math"&gt;\(i\)&lt;/span&gt;?" depends only on the univariate dataset
+&lt;span class="math"&gt;\(\left\{\vec{\mathbb{x}}^{(i)}_j, y_j\right\}_{j=1}^N\)&lt;/span&gt;; the other features are
+currently zeroed out and of no concern.&lt;/p&gt;
+&lt;p&gt;For feature &lt;span class="math"&gt;\(i\)&lt;/span&gt;, the magic threshold is the analogue of &lt;span class="math"&gt;\(2|D_{xy}|\)&lt;/span&gt;, taking a
+dot product between the &lt;span class="math"&gt;\(i\)&lt;/span&gt;th feature column vector and the label column vector:&lt;/p&gt;
+&lt;div class="math"&gt;$$\lambda &amp;gt; 2\left|\vec{\mathbb{y}}^T\vec{\mathbb{x}}^{(i)}\right|$$&lt;/div&gt;
+&lt;p&gt;The little guy will not move off &lt;span class="math"&gt;\(\vec{\mathbb{w}} = \vec{\mathbb{0}}\)&lt;/span&gt; if
+&lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; is big enough to cross the magic threshold for all &lt;span class="math"&gt;\(p\)&lt;/span&gt; features.
+Which means have a &lt;em&gt;meta&lt;/em&gt;-magic threshold in the multivariate case that zeros
+out all &lt;span class="math"&gt;\(p\)&lt;/span&gt; model weights, just by ramping &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; to a big enough value:&lt;/p&gt;
+&lt;div class="math"&gt;$$\lambda &amp;gt; \max_{i = 1, \ldots, p}2\left|\vec{\mathbb{y}}^T\vec{\mathbb{x}}^{(i)}\right|
+\Rightarrow \vec{\mathbb{w}}^*(\lambda) = \vec{\mathbb{0}}$$&lt;/div&gt;
+&lt;p&gt;(Note that the &lt;span class="math"&gt;\(\max_i\)&lt;/span&gt; operation is the same as, for our definition of matrix
+&lt;span class="math"&gt;\(\mathbf{X}\)&lt;/span&gt; above: "calculate the vector
+&lt;span class="math"&gt;\(\mathbf{X}^T\vec{\mathbb{y}}\)&lt;/span&gt;, then find the largest-magnitude element.")&lt;/p&gt;
+&lt;p&gt;This is also good to know!  If we're using crossvalidation to hunt for the
+perfect &lt;span class="math"&gt;\(\lambda\)&lt;/span&gt; parameter, it continues to be nice to have an upper bound on
+the search space.  It's good to understand why a statistical technique works.&lt;/p&gt;
+&lt;script type="text/javascript"&gt;if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
+    var align = "center",
+        indent = "0em",
+        linebreak = "false";
+
+    if (false) {
+        align = (screen.width &lt; 768) ? "left" : align;
+        indent = (screen.width &lt; 768) ? "0em" : indent;
+        linebreak = (screen.width &lt; 768) ? 'true' : linebreak;
+    }
+
+    var mathjaxscript = document.createElement('script');
+    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
+    mathjaxscript.type = 'text/javascript';
+    mathjaxscript.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/latest.js?config=TeX-AMS-MML_HTMLorMML';
+
+    var configscript = document.createElement('script');
+    configscript.type = 'text/x-mathjax-config';
+    configscript[(window.opera ? "innerHTML" : "text")] =
+        "MathJax.Hub.Config({" +
+        "    config: ['MMLorHTML.js']," +
+        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'none' } }," +
+        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
+        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
+        "    displayAlign: '"+ align +"'," +
+        "    displayIndent: '"+ indent +"'," +
+        "    showMathMenu: true," +
+        "    messageStyle: 'normal'," +
+        "    tex2jax: { " +
+        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
+        "        displayMath: [ ['$$','$$'] ]," +
+        "        processEscapes: true," +
+        "        preview: 'TeX'," +
+        "    }, " +
+        "    'HTML-CSS': { " +
+        "        availableFonts: ['STIX', 'TeX']," +
+        "        preferredFont: 'STIX'," +
+        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
+        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
+        "    }, " +
+        "}); " +
+        "if ('default' !== 'default') {" +
+            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
+                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
+                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
+                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
+                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
+                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
+            "});" +
+        "}";
+
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
+    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
+}
+&lt;/script&gt;</content><category term="stats"></category><category term="stats"></category><category term="ml"></category><category term="lasso"></category></entry><entry><title>Humanoid Robots Are a Would-be Platform</title><link href="https://brian.gawalt.com/blog/0003-robot-platform.html" rel="alternate"></link><published>2025-05-21T16:30:00-07:00</published><updated>2025-05-21T16:30:00-07:00</updated><author><name>Brian Gawalt</name></author><id>tag:brian.gawalt.com,2025-05-21:/blog/0003-robot-platform.html</id><summary type="html">&lt;p&gt;Humanoid robots would be a great platform business, if they worked.&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;img alt="MS Paint doodle of Bender from Futurama holding fistfuls of 100 dollar bills in front of the line go up emoji" src="/images/0003_bender_money.png" style="width:80%; max-width:400px;"&gt;&lt;/p&gt;
 &lt;p&gt;Here's an opportunity to talk about the tech industry narrowly (there's hype
 about humanoid robots) and broadly (there's eternal investor demand for
 platforms).&lt;/p&gt;
@@ -77,7 +598,7 @@ powerful barriers to market entry.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;The specific platform everyone's chasing is that big one up front, iOS
 (chart from Ball):&lt;/p&gt;
-&lt;p&gt;&lt;img alt="Bar chart of Apple annual operating cash flow" src="images/0003_apple_cash_flow.png" style="width=80%"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Bar chart of Apple annual operating cash flow" src="/images/0003_apple_cash_flow.png" style="width:90%"&gt;&lt;/p&gt;
 &lt;p&gt;Ball details how much money companies pour into would-be platforms, with Google
 Cloud (my most recent employer) as one example (emphasis Ball's):&lt;/p&gt;
 &lt;blockquote&gt;
@@ -95,7 +616,7 @@ black going forward. Still, forecasts suggest Google Cloud won’t reach
 cumulative breakeven until the 2030s (it won’t be IRR positive until years
 later,). That’s a literal quarter century and not guaranteed, either. &lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;p&gt;&lt;img alt="Bar charts of Apple annual operating cash flow" src="images/0003_google_cloud.png" style="width=80%"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Bar charts of Apple annual operating cash flow" src="/images/0003_google_cloud.png" style="width:90%"&gt;&lt;/p&gt;
 &lt;p&gt;One reason to hype humanoid robots, bipedalism and all, is to appeal to this
 platform play and imply these platform profits, so long as investors recognize
 that the precedent for platforms is "give us lots of money and don't ask for it
@@ -160,7 +681,7 @@ few years. But it's still good to recognize the motivated reasoning at work.&lt;
 &lt;a href="https://x.com/matthew_d_green/status/525441833024110593?s=20"&gt;a great old tweet&lt;/a&gt;
 from
 &lt;a href="https://bsky.app/profile/matthewdgreen.bsky.social"&gt;Matthew Green&lt;/a&gt;:&lt;/p&gt;
-&lt;p&gt;&lt;img alt="Screenshot of tweet from X user @matthew_d_green, display name &amp;quot;Matthew Green is on BlueSky&amp;quot;, text of: &amp;quot;I would liken Tor to putting on Sauron's ring. The wearer is invisible to ordinary beings, like Men, but highly visible to the Nazgûl.&amp;quot; Posted 5:21 PM, Oct 23, 2014; 922 likes, 828 retweets, as of this blog post" src="images/0002_tor_nazghul_tweet.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Screenshot of tweet from X user @matthew_d_green, display name &amp;quot;Matthew Green is on BlueSky&amp;quot;, text of: &amp;quot;I would liken Tor to putting on Sauron's ring. The wearer is invisible to ordinary beings, like Men, but highly visible to the Nazgûl.&amp;quot; Posted 5:21 PM, Oct 23, 2014; 922 likes, 828 retweets, as of this blog post" src="/images/0002_tor_nazghul_tweet.png"&gt;&lt;/p&gt;
 &lt;p&gt;I'm not a Tor expert, or even a Tor user, so I wouldn't trust my interpretation
 here to match Green's intent. But the dramatic stakes are preserved if I go
 with something like, "Tor saves you the risk that normies are snooping on your
