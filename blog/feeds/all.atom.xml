@@ -520,7 +520,7 @@ the search space.  It's good to understand why a statistical technique works.&lt
     (document.body || document.getElementsByTagName('head')[0]).appendChild(configscript);
     (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
 }
-&lt;/script&gt;</content><category term="stats"></category><category term="stats"></category><category term="ml"></category><category term="lasso"></category></entry><entry><title>Humanoid Robots Are a Would-be Platform</title><link href="https://brian.gawalt.com/blog/0003-robot-platform.html" rel="alternate"></link><published>2025-05-21T16:30:00-07:00</published><updated>2025-05-21T16:30:00-07:00</updated><author><name>Brian Gawalt</name></author><id>tag:brian.gawalt.com,2025-05-21:/blog/0003-robot-platform.html</id><summary type="html">&lt;p&gt;Humanoid robots would be a great platform business, if they worked.&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;img alt="MS Paint doodle of Bender from Futurama holding fistfuls of 100 dollar bills in front of the line go up emoji" src="/images/0003_bender_money.png" style="width:80%; max-width:400px;"&gt;&lt;/p&gt;
+&lt;/script&gt;</content><category term="stats"></category><category term="stats"></category><category term="ml"></category><category term="lasso"></category></entry><entry><title>Humanoid Robots Are a Would-be Platform</title><link href="https://brian.gawalt.com/blog/0003-robot-platform.html" rel="alternate"></link><published>2025-05-21T16:30:00-07:00</published><updated>2025-05-21T16:30:00-07:00</updated><author><name>Brian Gawalt</name></author><id>tag:brian.gawalt.com,2025-05-21:/blog/0003-robot-platform.html</id><summary type="html">&lt;p&gt;Humanoid robots would be a great platform business, if they worked.&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;img alt="MS Paint doodle of Bender from Futurama holding fistfuls of 100 dollar bills in front of the line go up emoji" src="https://brian.gawalt.com/blog/images/0003_bender_money.png" style="width:80%; max-width:400px;"&gt;&lt;/p&gt;
 &lt;p&gt;Here's an opportunity to talk about the tech industry narrowly (there's hype
 about humanoid robots) and broadly (there's eternal investor demand for
 platforms).&lt;/p&gt;
@@ -598,7 +598,7 @@ powerful barriers to market entry.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;The specific platform everyone's chasing is that big one up front, iOS
 (chart from Ball):&lt;/p&gt;
-&lt;p&gt;&lt;img alt="Bar chart of Apple annual operating cash flow" src="/images/0003_apple_cash_flow.png" style="width:90%"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Bar chart of Apple annual operating cash flow" src="https://brian.gawalt.com/blog/images/0003_apple_cash_flow.png" style="width:90%"&gt;&lt;/p&gt;
 &lt;p&gt;Ball details how much money companies pour into would-be platforms, with Google
 Cloud (my most recent employer) as one example (emphasis Ball's):&lt;/p&gt;
 &lt;blockquote&gt;
@@ -616,7 +616,7 @@ black going forward. Still, forecasts suggest Google Cloud won’t reach
 cumulative breakeven until the 2030s (it won’t be IRR positive until years
 later,). That’s a literal quarter century and not guaranteed, either. &lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;p&gt;&lt;img alt="Bar charts of Apple annual operating cash flow" src="/images/0003_google_cloud.png" style="width:90%"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Bar charts of Apple annual operating cash flow" src="https://brian.gawalt.com/blog/images/0003_google_cloud.png" style="width:90%"&gt;&lt;/p&gt;
 &lt;p&gt;One reason to hype humanoid robots, bipedalism and all, is to appeal to this
 platform play and imply these platform profits, so long as investors recognize
 that the precedent for platforms is "give us lots of money and don't ask for it
@@ -681,7 +681,7 @@ few years. But it's still good to recognize the motivated reasoning at work.&lt;
 &lt;a href="https://x.com/matthew_d_green/status/525441833024110593?s=20"&gt;a great old tweet&lt;/a&gt;
 from
 &lt;a href="https://bsky.app/profile/matthewdgreen.bsky.social"&gt;Matthew Green&lt;/a&gt;:&lt;/p&gt;
-&lt;p&gt;&lt;img alt="Screenshot of tweet from X user @matthew_d_green, display name &amp;quot;Matthew Green is on BlueSky&amp;quot;, text of: &amp;quot;I would liken Tor to putting on Sauron's ring. The wearer is invisible to ordinary beings, like Men, but highly visible to the Nazgûl.&amp;quot; Posted 5:21 PM, Oct 23, 2014; 922 likes, 828 retweets, as of this blog post" src="/images/0002_tor_nazghul_tweet.png"&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Screenshot of tweet from X user @matthew_d_green, display name &amp;quot;Matthew Green is on BlueSky&amp;quot;, text of: &amp;quot;I would liken Tor to putting on Sauron's ring. The wearer is invisible to ordinary beings, like Men, but highly visible to the Nazgûl.&amp;quot; Posted 5:21 PM, Oct 23, 2014; 922 likes, 828 retweets, as of this blog post" src="https://brian.gawalt.com/blog/images/0002_tor_nazghul_tweet.png"&gt;&lt;/p&gt;
 &lt;p&gt;I'm not a Tor expert, or even a Tor user, so I wouldn't trust my interpretation
 here to match Green's intent. But the dramatic stakes are preserved if I go
 with something like, "Tor saves you the risk that normies are snooping on your
